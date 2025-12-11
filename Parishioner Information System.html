@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parish Registration Workflow Prototype</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --danger: #c0392b;
+            --light: #ecf0f1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #e9ecef;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Card Styling */
+        .interface-card {
+            background: white;
+            width: 400px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .header h2 { margin: 0; font-size: 1.2rem; }
+        .header span { font-size: 0.8rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;}
+
+        .content { padding: 20px; flex-grow: 1; }
+
+        /* Form Elements */
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: #555; }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box; 
+        }
+
+        button {
+            cursor: pointer;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn-submit { background-color: var(--accent); color: white; width: 100%; }
+        .btn-submit:hover { background-color: #2980b9; }
+
+        /* Staff Dashboard Elements */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            background-color: #f1c40f; /* Pending yellow */
+            color: #444;
+            margin-bottom: 10px;
+        }
+
+        .review-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-approve { background-color: var(--success); color: white; flex: 1; }
+        .btn-reject { background-color: var(--danger); color: white; flex: 1; }
+
+        .hidden { display: none; }
+        
+        /* Simulation Feedback Styles */
+        .feedback-box {
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            text-align: center;
+            animation: fadeIn 0.5s;
+        }
+        .feedback-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .feedback-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Divider for visual separation */
+        .workflow-arrow {
+            display: flex;
+            align-items: center;
+            font-size: 2rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="interface-card">
+        <div class="header">
+            <span>Public View</span>
+            <h2>Registration Form</h2>
+        </div>
+        <div class="content" id="registration-view">
+            <form id="regForm" onsubmit="submitForm(event)">
+                <label for="fullName">Full Name</label>
+                <input type="text" id="fullName" placeholder="Enter donor's full name" required>
+
+                <label for="sacrament">Event Type</label>
+                <select id="sacrament">
+                    <option value="Baptism">Baptism</option>
+                    <option value="Confirmation">Confirmation</option>
+                    <option value="First Communion">First Communion</option>
+                    <option value="Marriage">Marriage</option>
+                    <option value="Anointing of the Sick">Anointing of the Sick</option>
+                    <option value="Confession">Confession</option>
+                    <option value="Mass">Mass</option>
+                    <option value="Holy Hour">Holy Hour</option>
+                    <option value="Adoration">Adoration</option>
+                    <option value="Feast Day Celebration">Feast Day Celebration</option>
+                    <option value="Prayer Meeting">Prayer Meeting</option>
+                    <option value="Choir Practice">Choir Practice</option>
+                    <option value="Youth Ministry Activities">Youth Ministry Activities</option>
+                    <option value="Catechism">Catechism</option>
+                    <option value="Retreats">Retreats</option>
+                    <option value="Fundraising Events">Fundraising Events</option>
+                    <option value="Anniversaries">Anniversaries</option>
+                    <option value="Festivals or Fiestas">Festivals or Fiestas</option>
+                    <option value="Outreach Programs">Outreach Programs</option>
+
+                </select>
+
+                <label for="dob">Date of Birth</label>
+                <input type="date" id="dob" required>
+
+                <label for="contact">Email Address</label>
+                <input type="email" id="contact" placeholder="Enter your email address" required>
+
+                <button type="submit" class="btn-submit">Submit Registration</button>
+            </form>
+            
+            <div id="user-feedback" class="hidden feedback-box feedback-success">
+                <strong>Submission Successful!</strong><br>
+                Your application is now under review by the Parish Staff.
+            </div>
+        </div>
+    </div>
+
+    <div class="workflow-arrow">➜</div>
+
+    <div class="interface-card">
+        <div class="header">
+            <span> Staff Portal</span>
+            <h2>Application Review</h2>
+        </div>
+        <div class="content">
+            <div id="empty-state" style="text-align: center; color: #888; margin-top: 50px;">
+                <em>No pending registrations.</em>
+            </div>
+
+            <div id="staff-panel" class="hidden">
+                <div class="status-badge">PENDING REVIEW</div>
+                
+                <p><strong>Candidate:</strong> <span id="staff-name"></span></p>
+                <p><strong>Sacrament:</strong> <span id="staff-sacrament"></span></p>
+                <p><strong>DOB:</strong> <span id="staff-dob"></span></p>
+
+                <hr style="border: 0; border-top: 1px solid #eee;">
+
+                <div class="review-actions">
+                    <button class="btn-approve" onclick="processDecision('approve')">Approve</button>
+                    <button class="btn-reject" onclick="processDecision('reject')">Reject</button>
+                </div>
+            </div>
+
+            <div id="outcome-approved" class="hidden feedback-box feedback-success">
+                <strong>✓ Approved</strong>
+                <p style="font-size: 0.85rem; margin-top: 5px;">Confirmation sent to user. Sacrament information recorded in registry.</p>
+            </div>
+
+            <div id="outcome-rejected" class="hidden feedback-box feedback-error">
+                <strong>✕ Rejected</strong>
+                <p style="font-size: 0.85rem; margin-top: 5px;">Rejection notice sent. Outcome stored in history.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulation Logic
+        function submitForm(e) {
+            e.preventDefault();
+            
+            // 1. Get Data
+            const name = document.getElementById('fullName').value;
+            const sacrament = document.getElementById('sacrament').value;
+            const dob = document.getElementById('dob').value;
+
+            // 2. Validate (Basic Simulation)
+            if(name.length < 3) {
+                alert("Validation Failed: Name is too short.");
+                return;
+            }
+
+            // 3. Update User UI (Feedback)
+            document.getElementById('regForm').classList.add('hidden');
+            document.getElementById('user-feedback').classList.remove('hidden');
+
+            // 4. "Forward" to Staff UI
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('staff-panel').classList.remove('hidden');
+            
+            // Populate Staff View
+            document.getElementById('staff-name').textContent = name;
+            document.getElementById('staff-sacrament').textContent = sacrament;
+            document.getElementById('staff-dob').textContent = dob;
+        }
+
+        function processDecision(decision) {
+            // Hide the review panel
+            document.getElementById('staff-panel').classList.add('hidden');
+
+            if(decision === 'approve') {
+                // Show Approval Confirmation & Record Data
+                document.getElementById('outcome-approved').classList.remove('hidden');
+                console.log("System Log: Registration Approved. Sacrament Recorded.");
+            } else {
+                // Show Rejection & End Process
+                document.getElementById('outcome-rejected').classList.remove('hidden');
+                console.log("System Log: Registration Rejected. Outcome Stored.");
+            }
+        }
+    </script>
+</body>
+</html>

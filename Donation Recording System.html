@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donation Management Workflow</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --staff: #e67e22;
+            --finance: #8e44ad;
+            --donor: #27ae60;
+            --light: #f4f6f7;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #ecf0f1;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Role Navigation Bar */
+        .role-nav {
+            background: #fff;
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .role-btn {
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .role-btn.active-donor { background: var(--donor); color: white; border-color: var(--donor); }
+        .role-btn.active-staff { background: var(--staff); color: white; border-color: var(--staff); }
+        .role-btn.active-finance { background: var(--finance); color: white; border-color: var(--finance); }
+
+        /* Main Container */
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Views */
+        .view-section { display: none; animation: fadeIn 0.4s; }
+        .view-section.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+
+        /* Form Styles */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+        }
+        .btn-submit { background: var(--donor); width: 100%; }
+        .btn-verify { background: var(--staff); }
+        .btn-return { background: #c0392b; }
+        .btn-receipt { background: #2980b9; }
+        .btn-archive { background: var(--finance); }
+
+        /* System Logs & Alerts */
+        .system-log {
+            background: #222;
+            color: #0f0;
+            font-family: monospace;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-size: 0.85rem;
+            display: none; /* Hidden until active */
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: #bdc3c7;
+            color: #444;
+        }
+        
+        /* Receipt Box */
+        .receipt-box {
+            border: 2px dashed #aaa;
+            background: #fffcf5;
+            padding: 20px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="role-nav">
+        <button class="role-btn active-donor" onclick="switchRole('donor')">Donor View</button>
+        <button class="role-btn" onclick="switchRole('staff')">Staff View</button>
+        <button class="role-btn" onclick="switchRole('finance')">Finance View</button>
+    </div>
+
+    <div class="container">
+
+        <div id="view-donor" class="view-section active">
+            <h2 style="color: var(--donor);">Donation</h2>
+            
+            <div id="correction-alert" style="display:none; background: #fadbd8; color: #721c24; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                <strong>Action Required:</strong> The staff returned your form. Please fix the missing details and resubmit.
+            </div>
+
+            <div id="donation-form-container">
+                <div class="form-group">
+                    <label>Donor Name</label>
+                    <input type="text" id="d-name" placeholder="Enter donor's full name">
+                </div>
+                <div class="form-group">
+                    <label>Amount (PHP)</label>
+                    <input type="number" id="d-amount" placeholder="1000">
+                </div>
+                <div class="form-group">
+                    <label>Your message (optional)</label>
+                    <textarea id="d-notes" rows="3"></textarea>
+                </div>
+                <button class="btn btn-submit" onclick="submitDonation()">Submit Donation</button>
+            </div>
+
+            <div id="donor-receipt-area" style="display:none;">
+                <div class="receipt-box">
+                    <h3>OFFICIAL RECEIPT</h3>
+                    <p>Thank you for your donation of <strong><span id="receipt-amount"></span> PHP</strong>.</p>
+                    <p>Status: <span style="color:green; font-weight:bold;">Verified & Recorded</span></p>
+                </div>
+            </div>
+
+            <div id="donor-pending-msg" style="display:none; text-align: center; color: #7f8c8d; margin-top: 20px;">
+                <em>Your donation is currently pending verification.</em>
+            </div>
+        </div>
+
+        <div id="view-staff" class="view-section">
+            <h2 style="color: var(--staff);">Staff Verification Portal</h2>
+            
+            <div id="staff-empty" style="color: #999; text-align:center;">No pending donations.</div>
+
+            <div id="staff-task" style="display:none;">
+                <div style="border: 1px solid #ddd; padding: 15px; border-radius: 4px;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <strong>Incoming Donation</strong>
+                        <span class="status-badge">PENDING REVIEW</span>
+                    </div>
+                    <hr>
+                    <p><strong>Donor:</strong> <span id="s-name"></span></p>
+                    <p><strong>Amount:</strong> <span id="s-amount"></span></p>
+                    
+                    <div style="display:flex; gap: 10px; margin-top: 15px;">
+                        <button class="btn btn-return" onclick="returnForm()">⚠ Return for Correction</button>
+                        <button class="btn btn-verify" onclick="verifyForm()">✓ Verify Information</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="system-log-area" class="system-log">
+                > SYSTEM: Data Verified.<br>
+                > SYSTEM: Record stored in Database.<br>
+                > SYSTEM: Donor History Updated.<br>
+                > SYSTEM: Notification sent to Finance Officer.
+            </div>
+
+            <div id="staff-receipt-action" style="display:none; margin-top: 15px;">
+                <button class="btn btn-receipt" style="width:100%" onclick="issueReceipt()">✉ Issue & Send Receipt</button>
+            </div>
+        </div>
+
+        <div id="view-finance" class="view-section">
+            <h2 style="color: var(--finance);">Finance Validation</h2>
+            
+            <div id="finance-empty" style="color: #999; text-align:center;">No reports to validate.</div>
+
+            <div id="finance-task" style="display:none;">
+                <p><strong>Report ID:</strong> #99210</p>
+                <p><strong>Status:</strong> Verified by Staff. Waiting for Finance Approval.</p>
+                <div style="background: #f9f9f9; padding: 10px; border: 1px solid #eee;">
+                    Total Verified: <strong id="f-amount"></strong>
+                </div>
+                <br>
+                <button class="btn btn-archive" onclick="archiveReport()">✓ Approve & Archive Report</button>
+            </div>
+            
+            <div id="finance-success" style="display:none; color: green; text-align: center; margin-top: 20px;">
+                <strong>Report Archived Successfully.</strong>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // State Management
+        let currentData = {};
+
+        function switchRole(role) {
+            // Update Buttons
+            document.querySelectorAll('.role-btn').forEach(btn => {
+                btn.className = 'role-btn'; // reset
+            });
+            document.querySelector(`.role-btn[onclick="switchRole('${role}')"]`).classList.add(`active-${role}`);
+
+            // Update Views
+            document.querySelectorAll('.view-section').forEach(view => {
+                view.classList.remove('active');
+            });
+            document.getElementById(`view-${role}`).classList.add('active');
+        }
+
+        // --- Step 1: Donor Submits ---
+        function submitDonation() {
+            const name = document.getElementById('d-name').value;
+            const amount = document.getElementById('d-amount').value;
+
+            if(!name || !amount) { alert("Please fill in fields"); return; }
+
+            currentData = { name, amount };
+
+            // Update UI
+            document.getElementById('donation-form-container').style.display = 'none';
+            document.getElementById('donor-pending-msg').style.display = 'block';
+            document.getElementById('correction-alert').style.display = 'none'; // Hide error if it was there
+
+            // Send to Staff
+            document.getElementById('staff-empty').style.display = 'none';
+            document.getElementById('staff-task').style.display = 'block';
+            document.getElementById('s-name').innerText = name;
+            document.getElementById('s-amount').innerText = amount + " PHP";
+
+            alert("Donation Submitted! Now switch to 'Staff View'.");
+        }
+
+        // --- Step 2A: Staff Returns for Correction ---
+        function returnForm() {
+            // Hide Staff Task
+            document.getElementById('staff-task').style.display = 'none';
+            document.getElementById('staff-empty').style.display = 'block';
+
+            // Show Donor Form again with Error
+            document.getElementById('donation-form-container').style.display = 'block';
+            document.getElementById('donor-pending-msg').style.display = 'none';
+            document.getElementById('correction-alert').style.display = 'block';
+
+            alert("Form Returned. Switch to 'Donor View' to see the correction request.");
+        }
+
+        // --- Step 2B: Staff Verifies ---
+        function verifyForm() {
+            // Disable verify buttons
+            document.querySelector('.btn-verify').disabled = true;
+            document.querySelector('.btn-return').disabled = true;
+            document.querySelector('.status-badge').innerText = "VERIFIED";
+            document.querySelector('.status-badge').style.background = "#27ae60";
+            document.querySelector('.status-badge').style.color = "white";
+
+            // Show System Log animation
+            document.getElementById('system-log-area').style.display = 'block';
+
+            // Show Receipt Button
+            setTimeout(() => {
+                document.getElementById('staff-receipt-action').style.display = 'block';
+            }, 1000);
+
+            // Notify Finance
+            document.getElementById('finance-empty').style.display = 'none';
+            document.getElementById('finance-task').style.display = 'block';
+            document.getElementById('f-amount').innerText = currentData.amount + " PHP";
+        }
+
+        // --- Step 3: Staff Issues Receipt ---
+        function issueReceipt() {
+            // Update Donor View
+            document.getElementById('donor-pending-msg').style.display = 'none';
+            document.getElementById('donor-receipt-area').style.display = 'block';
+            document.getElementById('receipt-amount').innerText = currentData.amount;
+            
+            alert("Receipt Issued! Switch to 'Donor View' to see it.");
+            document.getElementById('staff-receipt-action').innerHTML = "<em>Receipt Sent</em>";
+        }
+
+        // --- Step 4: Finance Archives ---
+        function archiveReport() {
+            document.getElementById('finance-task').style.display = 'none';
+            document.getElementById('finance-success').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

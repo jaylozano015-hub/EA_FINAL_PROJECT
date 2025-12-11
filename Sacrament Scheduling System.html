@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sacrament Lifecycle Prototype</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --gold: #d4ac0d;
+            --light: #f8f9fa;
+            --success: #27ae60;
+            --border: #dee2e6;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #e9ecef;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Progress Stepper */
+        .stepper {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .step {
+            text-align: center;
+            z-index: 2;
+            width: 80px;
+        }
+
+        .step-circle {
+            background: #ccc;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 5px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .step.active .step-circle { background: var(--primary); }
+        .step.completed .step-circle { background: var(--success); }
+        .step-text { font-size: 0.75rem; color: #666; font-weight: bold;}
+
+        /* Connecting Line */
+        .stepper::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 40px;
+            right: 40px;
+            height: 2px;
+            background: #ccc;
+            z-index: 1;
+        }
+
+        /* Main Container */
+        .container {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 400px;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h2 { margin: 0; font-size: 1.4rem; }
+
+        .view-section {
+            padding: 25px;
+            display: none; /* Hidden by default */
+            animation: fadeIn 0.5s;
+        }
+        
+        .view-section.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Form Elements */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.9rem; margin-bottom: 5px; color: #555; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { background: #1a252f; }
+        button.secondary { background: #95a5a6; }
+
+        /* Staff Checks */
+        .availability-box {
+            background: var(--light);
+            padding: 15px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .check-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .check-item input { width: auto; margin-right: 10px; }
+
+        /* System Logs Styles */
+        .system-log {
+            font-family: 'Courier New', monospace;
+            background: #333;
+            color: #0f0;
+            padding: 10px;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        /* Certificate Styles */
+        .certificate {
+            border: 10px double var(--primary);
+            padding: 20px;
+            text-align: center;
+            background: #fffcf5;
+            position: relative;
+        }
+        .certificate h3 { font-family: 'Times New Roman', serif; font-size: 1.8rem; color: var(--primary); margin-bottom: 5px; }
+        .cert-name { font-size: 1.5rem; font-weight: bold; color: var(--gold); border-bottom: 1px solid #ccc; display: inline-block; min-width: 200px; margin: 10px 0; }
+        .watermark { opacity: 0.1; font-size: 5rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+
+    </style>
+</head>
+<body>
+
+    <div class="stepper">
+        <div class="step active" id="step-1">
+            <div class="step-circle">1</div>
+            <div class="step-text">Request</div>
+        </div>
+        <div class="step" id="step-2">
+            <div class="step-circle">2</div>
+            <div class="step-text">Review</div>
+        </div>
+        <div class="step" id="step-3">
+            <div class="step-circle">3</div>
+            <div class="step-text">Schedule</div>
+        </div>
+        <div class="step" id="step-4">
+            <div class="step-circle">4</div>
+            <div class="step-text">Done</div>
+        </div>
+    </div>
+
+    <div class="container">
+        
+        <div id="view-1" class="view-section active">
+            <div class="header">
+                <h2>Sacrament Request</h2>
+            </div>
+            <br>
+            <form onsubmit="submitRequest(event)">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="candidateName" placeholder="Enter donor's full name" required>
+                </div>
+                <div class="form-group">
+                    <label>Sacrament Type</label>
+                    <select id="sacramentType">
+                        <option>Baptism</option>
+                        <option>Confirmation</option>
+                        <option>Communion</option>
+                        <option>Confession</option>
+                        <option>Anointing of the Sick</option>
+                        <option>Holy Orders</option>
+                        <option>Matrimony</option>
+
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Preferred Date</label>
+                    <input type="date" required>
+                </div>
+                <button type="submit">Submit Request</button>
+            </form>
+        </div>
+
+        <div id="view-2" class="view-section">
+            <div class="header" style="background-color: #d35400;">
+                <h2>Staff Review Portal</h2>
+            </div>
+            <br>
+            <div class="system-log">
+                > System: New Request Received.<br>
+                > Notification sent to Parish Office.
+            </div>
+
+            <p><strong>Candidate:</strong> <span class="display-name"></span></p>
+            <p><strong>Status:</strong> Pending Availability Check</p>
+
+            <div class="availability-box">
+                <label style="margin-bottom:10px; text-transform: uppercase; font-size: 0.75rem; font-weight: bold;">Requirements Check:</label>
+                <div class="check-item">
+                    <input type="checkbox" id="check-priest"> Priest/Celebrant Available
+                </div>
+                <div class="check-item">
+                    <input type="checkbox" id="check-venue"> Venue/Church Available
+                </div>
+            </div>
+
+            <button onclick="approveRequest()" id="btn-approve" class="secondary">Approve & Generate Schedule</button>
+        </div>
+
+        <div id="view-3" class="view-section">
+            <div class="header" style="background-color: var(--success);">
+                <h2>Event Scheduled</h2>
+            </div>
+            <br>
+            <div class="system-log">
+                > Schedule ID #9921 generated.<br>
+                > Confirmation email sent to user.<br>
+                > Reminder set for T-minus 2 days.
+            </div>
+
+            <div style="text-align: center; padding: 20px;">
+                <h3>Event Day</h3>
+                <p>The ceremony is taking place...</p>
+                <br>
+                <button onclick="completeCeremony()">Log Ceremony Completion</button>
+            </div>
+        </div>
+
+        <div id="view-4" class="view-section">
+            <div class="header">
+                <h2>Official Record</h2>
+            </div>
+            <br>
+            <div class="system-log">
+                > Completion logged.<br>
+                > Registry updated.<br>
+                > Certificate generated.
+            </div>
+
+            <div class="certificate">
+                <div class="watermark">†</div>
+                <h3>Certificate of <span class="display-sacrament"></span></h3>
+                <p>This certifies that</p>
+                <div class="cert-name display-name"></div>
+                <p>has successfully received the sacrament.</p>
+                <p style="font-size: 0.8rem; margin-top: 20px;">Issued by the Parish Office</p>
+            </div>
+            <br>
+            <button class="secondary" onclick="location.reload()">Start New Process</button>
+        </div>
+
+    </div>
+
+    <script>
+        let candidateName = "";
+        let sacramentType = "";
+
+        // Logic to handle Step 1: Submission
+        function submitRequest(e) {
+            e.preventDefault();
+            candidateName = document.getElementById('candidateName').value;
+            sacramentType = document.getElementById('sacramentType').value;
+            
+            // Update all placeholders with the name
+            document.querySelectorAll('.display-name').forEach(el => el.textContent = candidateName);
+            document.querySelectorAll('.display-sacrament').forEach(el => el.textContent = sacramentType);
+
+            goToStep(2);
+        }
+
+        // Logic to handle Step 2: Approval
+        function approveRequest() {
+            const priestCheck = document.getElementById('check-priest').checked;
+            const venueCheck = document.getElementById('check-venue').checked;
+
+            if(!priestCheck || !venueCheck) {
+                alert("Please confirm both Priest and Venue availability before approving.");
+                return;
+            }
+
+            goToStep(3);
+        }
+
+        // Logic to handle Step 3: Completion
+        function completeCeremony() {
+            goToStep(4);
+        }
+
+        // Helper to switch views and update stepper
+        function goToStep(stepNumber) {
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            // Show current view
+            document.getElementById('view-' + stepNumber).classList.add('active');
+
+            // Update Stepper UI
+            for (let i = 1; i <= 4; i++) {
+                const stepEl = document.getElementById('step-' + i);
+                if (i < stepNumber) {
+                    stepEl.classList.add('completed');
+                    stepEl.classList.remove('active');
+                } else if (i === stepNumber) {
+                    stepEl.classList.add('active');
+                } else {
+                    stepEl.classList.remove('active', 'completed');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
